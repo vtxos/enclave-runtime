@@ -278,6 +278,50 @@ resource "aws_iam_role_policy" "push" {
   policy = data.aws_iam_policy_document.push[0].json
 }
 
+# Guest telemetry, as the image names it (`xray` and `metricsNamespace` in
+# deploy/nix/deployment.nix), and only what the runtime calls. X-Ray takes no
+# resource-level scoping, so trace segments are account-wide; metrics are held to the
+# image's one namespace by condition. Nothing when telemetry is off.
+locals {
+  telemetry_on = var.telemetry.xray || var.telemetry.metrics_namespace != ""
+}
+
+data "aws_iam_policy_document" "telemetry" {
+  count = local.telemetry_on ? 1 : 0
+
+  dynamic "statement" {
+    for_each = var.telemetry.xray ? [1] : []
+    content {
+      sid       = "PutGuestTraces"
+      effect    = "Allow"
+      actions   = ["xray:PutTraceSegments"]
+      resources = ["*"]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.telemetry.metrics_namespace != "" ? [1] : []
+    content {
+      sid       = "PutGuestMetrics"
+      effect    = "Allow"
+      actions   = ["cloudwatch:PutMetricData"]
+      resources = ["*"]
+      condition {
+        test     = "StringEquals"
+        variable = "cloudwatch:namespace"
+        values   = [var.telemetry.metrics_namespace]
+      }
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "telemetry" {
+  count  = local.telemetry_on ? 1 : 0
+  name   = "${local.name}-telemetry"
+  role   = aws_iam_role.parent.id
+  policy = data.aws_iam_policy_document.telemetry[0].json
+}
+
 # For a shell without opening port 22.
 resource "aws_iam_role_policy_attachment" "ssm" {
   role       = aws_iam_role.parent.name

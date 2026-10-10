@@ -363,6 +363,15 @@
           # them.
           ENCLAVE_GUEST_LOG_GROUP = deployment.guestLogGroup;
 
+          # Guest telemetry (wit/telemetry). With `xray`, each guest invocation
+          # goes to X-Ray as one trace, attributed to its tenant; with a
+          # `metricsNamespace`, guest metrics go to CloudWatch under it through
+          # PutMetricData. Called from inside, like the log group, so each needs
+          # its IAM grant (deploy/tofu `telemetry`). Defaulted, so a
+          # deployment.nix written before telemetry still builds, with it off.
+          ENCLAVE_XRAY = lib.boolToString (deployment.xray or false);
+          ENCLAVE_METRICS_NAMESPACE = deployment.metricsNamespace or "";
+
           # Every request that could reach the guest needs a fresh WebAuthn
           # assertion bound to exactly that request. Without an RP id the
           # runtime serves the guest to anyone who can open a connection and
