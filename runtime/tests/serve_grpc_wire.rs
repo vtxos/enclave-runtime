@@ -179,6 +179,7 @@ async fn start() -> Harness {
             ServeConfig {
                 background_tasks: None,
                 notify: None,
+                telemetry: Default::default(),
                 addr,
                 certificate: Some(enclave_runtime::CertificateSlot::fixed(identity)),
                 acme: None,

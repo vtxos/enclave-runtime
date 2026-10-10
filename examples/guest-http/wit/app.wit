@@ -10,4 +10,5 @@ package guest:http@0.1.0;
 world app {
     include enclave:tasks/background@0.1.0;
     import enclave:notify/notify@0.1.0;
+    include enclave:telemetry/observed@0.1.0;
 }
