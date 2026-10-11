@@ -28,6 +28,13 @@ say "benchmarks"
 # that understands it.
 #
 # lib.sh sets `pipefail`, so a failing cargo still fails the script despite tee.
+#
+# Criterion compares each run with the last one it finds under target/criterion, and in CI that
+# is whatever the cache restored — sometimes a `base/` without its `sample.json`. Criterion then
+# prints an error onto each result's line, which the tracker cannot parse, and the job fails on
+# the cache's state rather than on a number. The history is the tracker's (gh-pages), not
+# Criterion's, so every run starts without it.
+rm -rf "$REPO/target/criterion"
 : > "$REPO/bench.txt"
 cargo bench -p enclave-runtime --bench instance_cost -- --output-format bencher \
     | tee -a "$REPO/bench.txt"
