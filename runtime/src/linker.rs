@@ -19,6 +19,7 @@ pub fn build_linker(engine: &wasmtime::Engine) -> Result<Linker<State>> {
     crate::tasks::add_to_linker(&mut linker)?;
     crate::stream::add_to_linker(&mut linker)?;
     crate::notify::add_to_linker(&mut linker)?;
+    crate::telemetry::add_to_linker(&mut linker)?;
     Ok(linker)
 }
 

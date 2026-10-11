@@ -99,6 +99,7 @@ pub struct EnclaveBuilder {
     guest: Vec<u8>,
     background_tasks: bool,
     notify: bool,
+    telemetry: crate::telemetry::Telemetry,
 }
 
 impl EnclaveBuilder {
@@ -116,6 +117,14 @@ impl EnclaveBuilder {
     /// far end is not AWS.
     pub fn notify(mut self) -> Self {
         self.notify = true;
+        self
+    }
+
+    /// Ship guest spans and metrics through `telemetry` — typically a [`crate::telemetry::Tracer`]
+    /// and [`crate::telemetry::Metrics`] over in-memory destinations, so a test can see what a
+    /// guest reported without AWS.
+    pub fn telemetry(mut self, telemetry: crate::telemetry::Telemetry) -> Self {
+        self.telemetry = telemetry;
         self
     }
 
@@ -138,6 +147,7 @@ impl Enclave {
             guest: guest.into(),
             background_tasks: false,
             notify: false,
+            telemetry: Default::default(),
         }
     }
 
@@ -205,6 +215,7 @@ impl Enclave {
                 guest_env,
                 ServeConfig {
                     notify,
+                    telemetry: builder.telemetry.clone(),
                     background_tasks: builder.background_tasks.then(Default::default),
                     addr,
                     certificate: Some(crate::CertificateSlot::fixed(Arc::new(tls))),

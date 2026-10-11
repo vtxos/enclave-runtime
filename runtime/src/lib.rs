@@ -40,6 +40,7 @@ pub mod state;
 pub mod store;
 pub mod stream;
 pub mod tasks;
+pub mod telemetry;
 pub mod tenant;
 pub mod zfs;
 

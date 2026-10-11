@@ -199,6 +199,10 @@ async fn main(mut req: Request<Body>) -> Result<Response<Body>, Error> {
             })
         }
         ("GET", "/env") => Ok(text(StatusCode::OK, environment())),
+        // Known spans, events and metrics, for the runtime's telemetry tests: a span with a
+        // field and an event, a child opened inside it, a free-standing event that must land on
+        // the innermost open span, and one of each kind of metric.
+        ("GET", "/telemetry") => Ok(text(StatusCode::OK, telemetry())),
         // Whatever the runtime says about the caller. A guest can only ever
         // read this header, never write it, and the runtime overwrites it on
         // every request — so what arrives here is the runtime's word, not the
@@ -403,6 +407,34 @@ fn counter() -> Result<u64, String> {
         .map_err(|e| format!("writing {path}: {e}"))?;
     f.sync_all().map_err(|e| format!("syncing {path}: {e}"))?;
     Ok(next)
+}
+
+fn telemetry() -> String {
+    use bindings::enclave::telemetry::metrics::{self, Dimension, Unit};
+    use bindings::enclave::telemetry::tracing::{self, Field, Level, Span};
+
+    let field = |key: &str, value: &str| Field {
+        key: key.to_string(),
+        value: value.to_string(),
+    };
+    let outer = Span::new(Level::Info, "handle", &[field("route", "/telemetry")]);
+    outer.set_field("phase", "start");
+    outer.add_event(Level::Info, "began", &[]);
+    {
+        // Ended by being dropped, not by `end`.
+        let _inner = Span::new(Level::Debug, "inner", &[]);
+        tracing::event(Level::Warn, "inside inner", &[field("n", "1")]);
+    }
+    outer.end();
+
+    let route = [Dimension {
+        name: "route".to_string(),
+        value: "telemetry".to_string(),
+    }];
+    metrics::counter_add("requests", 1.0, &route);
+    metrics::gauge_set("queue-depth", 3.0, Unit::Count, &[]);
+    metrics::histogram_record("latency", 12.5, Unit::Milliseconds, &route);
+    "reported\n".to_string()
 }
 
 fn environment() -> String {

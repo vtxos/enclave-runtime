@@ -163,6 +163,7 @@ async fn start_inner(slot: Option<enclave_runtime::CertificateSlot>) -> Harness 
             ServeConfig {
                 background_tasks: None,
                 notify: None,
+                telemetry: Default::default(),
                 addr,
                 certificate,
                 acme: None,

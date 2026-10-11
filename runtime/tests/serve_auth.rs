@@ -192,6 +192,7 @@ async fn start_with_background(background: bool) -> Harness {
             ServeConfig {
                 background_tasks: background.then(Default::default),
                 notify: None,
+                telemetry: Default::default(),
                 addr,
                 certificate: Some(enclave_runtime::CertificateSlot::fixed(Arc::new(tls))),
                 acme: None,

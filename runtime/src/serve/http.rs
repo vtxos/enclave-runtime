@@ -47,6 +47,9 @@ pub struct ServeConfig {
     /// here rather than by the caller, because both need the mounted
     /// filesystem and the trusted clock, and this is where those exist.
     pub notify: Option<crate::notify::NotifyConfig>,
+    /// Where guest spans and metrics go. The default sends nowhere, and the guest's calls still
+    /// succeed — see [`crate::telemetry`].
+    pub telemetry: crate::telemetry::Telemetry,
     /// Address to accept on.
     pub addr: SocketAddr,
     /// Where TLS connections take their serving identity. `None` serves
@@ -107,6 +110,7 @@ impl Default for ServeConfig {
         ServeConfig {
             background_tasks: None,
             notify: None,
+            telemetry: Default::default(),
             addr: ([0, 0, 0, 0], 8080).into(),
             certificate: None,
             acme: None,
@@ -177,6 +181,9 @@ pub struct ServeHandle {
     /// Connections this runtime holds for guests — see [`crate::stream`].
     streams: Option<Arc<crate::stream::StreamRegistry>>,
     notify: Option<Arc<crate::notify::Notifier>>,
+    /// Where each invocation's trace and metrics go. Every invocation gets a context, so a guest's
+    /// telemetry calls always resolve.
+    telemetry: crate::telemetry::Telemetry,
     guest: Arc<GuestEnvironment>,
     /// One request at a time for callers with no resolved tenant.
     ///
@@ -284,6 +291,7 @@ impl ServeHandle {
             tasks: None,
             streams: None,
             notify: None,
+            telemetry: Default::default(),
             pre,
             guest: Arc::new(guest),
             anonymous: Arc::new(tokio::sync::Mutex::new(())),
@@ -343,6 +351,13 @@ impl ServeHandle {
         Ok(self)
     }
 
+    /// Ship guest spans and metrics. No tenancy requirement: an anonymous request is attributed
+    /// to the anonymous tenant, as its filesystem is.
+    pub fn with_telemetry(mut self, telemetry: crate::telemetry::Telemetry) -> Self {
+        self.telemetry = telemetry;
+        self
+    }
+
     /// An internal component export, never an HTTP route or a fabricated token.
     /// One message from a held connection, as one guest invocation.
     ///
@@ -386,6 +401,10 @@ impl ServeHandle {
                         tenant,
                         interactive: false,
                     });
+            store.data_mut().telemetry = Some(
+                self.telemetry
+                    .context(tenant, crate::telemetry::Invocation::Message),
+            );
             let run = instance
                 .get_typed_func::<(String, String, Vec<u8>), (std::result::Result<Vec<u8>, String>,)>(
                     &mut store,
@@ -465,6 +484,10 @@ impl ServeHandle {
                         tenant: task.tenant,
                         interactive: false,
                     });
+            store.data_mut().telemetry = Some(
+                self.telemetry
+                    .context(task.tenant, crate::telemetry::Invocation::Task),
+            );
             let run = instance
                 .get_typed_func::<(String, Vec<u8>), (std::result::Result<Vec<u8>, String>,)>(
                     &mut store, "run-task",
@@ -649,6 +672,10 @@ impl ServeHandle {
                     tenant: tenant_id,
                     interactive: true,
                 });
+        instance.store.data_mut().telemetry = Some(
+            self.telemetry
+                .context(tenant_id, crate::telemetry::Invocation::Request),
+        );
         let progress = instance.progress.clone();
         let (sender, receiver) = tokio::sync::oneshot::channel();
         // Wrapped before it becomes a guest resource, which is the last point
@@ -791,6 +818,10 @@ impl ServeHandle {
         // unauthenticated guest `/runtime` and every tenant.
         let (dir, _) = self.guest.zfs().tenant_dir(ANONYMOUS).await?;
         let mut store = Store::new(self.pre.engine(), self.guest.new_state(Some(&dir))?);
+        store.data_mut().telemetry = Some(
+            self.telemetry
+                .context(ANONYMOUS, crate::telemetry::Invocation::Request),
+        );
         let progress = Arc::new(StreamProgress::new());
         store.set_epoch_deadline(self.watchdog());
         self.arm_watchdog(&mut store, progress.clone());
@@ -1623,9 +1654,11 @@ pub async fn serve_component(
     // wasmtime 44 enables async at the engine level when the `async` feature
     // is on; `Config::async_support` is a no-op. Same as `run_component`.
     let engine = ServeHandle::engine_with_watchdog()?;
+    let telemetry = std::mem::take(&mut config.telemetry);
     let mut handle = ServeHandle::new(&engine, component_bytes, guest)?
         .with_timeout(config.request_timeout)
-        .with_max_interaction(config.max_interaction);
+        .with_max_interaction(config.max_interaction)
+        .with_telemetry(telemetry.clone());
     if let Some(tenancy) = &config.tenancy {
         handle = handle.with_tenancy(tenancy.clone());
     }
@@ -1795,6 +1828,8 @@ pub async fn serve_component(
     if let Some(forwarder) = notify_forwarder {
         forwarder.shutdown().await;
     }
+    // The same for the last invocations' traces and the metrics still aggregating.
+    telemetry.shutdown().await;
     served
 }
 

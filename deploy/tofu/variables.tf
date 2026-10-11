@@ -91,6 +91,15 @@ variable "push_app_id" {
   default     = ""
 }
 
+variable "telemetry" {
+  description = "Guest telemetry, as the image names it (xray and metricsNamespace in deployment.nix). With xray the parent's role may put X-Ray trace segments; with a metrics_namespace it may publish CloudWatch metrics to that namespace and no other."
+  type = object({
+    xray              = optional(bool, false)
+    metrics_namespace = optional(string, "")
+  })
+  default = {}
+}
+
 variable "pool_size_gib" {
   type        = number
   default     = 32

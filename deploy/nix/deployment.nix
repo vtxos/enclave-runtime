@@ -80,6 +80,19 @@
   # which names it "/${name_prefix}-${environment}/guest".
   guestLogGroup = "/CHANGE-ME-production/guest";
 
+  # Guest telemetry: what a guest reports through wit/telemetry. `xray`
+  # exports each guest invocation as one X-Ray trace, attributed to its
+  # tenant; `metricsNamespace` publishes guest metrics to CloudWatch under that
+  # namespace (not under `AWS/`), or "" for none. Each needs the instance
+  # role's grant — `deploy/tofu` gives it when `telemetry` is set there.
+  #
+  # Measured by PCR0 like everything here, so a client can tell from an
+  # attestation whether an enclave ships its traces off the box. What a trace
+  # carries is the guest's own text plus the tenant id; see
+  # runtime/src/telemetry.
+  xray = false;
+  metricsNamespace = "";
+
   # The guest is not here either. The runtime fetches it from
   # `guest/guest.wasm` in `rootsBucket` (`bucketPrefix` is not applied) and
   # measures it into PCR16 before it asks KMS for a key, so changing the guest

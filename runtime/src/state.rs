@@ -11,6 +11,9 @@ pub struct State {
     /// The connections the runtime holds for this tenant — see [`crate::stream`].
     pub(crate) streams: Option<crate::stream::StreamContext>,
     pub(crate) notify: Option<crate::notify::NotifyContext>,
+    /// This invocation's trace and where its metrics go — see [`crate::telemetry`]. Its trace is
+    /// shipped when this is dropped, which is when the store is.
+    pub(crate) telemetry: Option<crate::telemetry::TelemetryContext>,
     wasi: WasiCtx,
     table: ResourceTable,
     http: wasmtime_wasi_http::WasiHttpCtx,
@@ -25,11 +28,23 @@ impl State {
             tasks: None,
             streams: None,
             notify: None,
+            telemetry: None,
             wasi,
             table: ResourceTable::new(),
             http: wasmtime_wasi_http::WasiHttpCtx::new(),
             egress: crate::serve::GuestEgress,
         }
+    }
+
+    /// The telemetry context and the resource table at once. A guest's span is an entry in the
+    /// table that points into the context's trace, so every span call needs both halves.
+    pub(crate) fn telemetry_and_table(
+        &mut self,
+    ) -> (
+        Option<&mut crate::telemetry::TelemetryContext>,
+        &mut ResourceTable,
+    ) {
+        (self.telemetry.as_mut(), &mut self.table)
     }
 }
 

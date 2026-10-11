@@ -69,6 +69,87 @@ fn nonempty(value: &Option<String>) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Start shipping guest spans to X-Ray and guest metrics to CloudWatch, as the flags ask.
+///
+/// A malformed namespace fails the boot: it is a deployment mistake that would otherwise surface
+/// only as every metric refused. A client that cannot be built in time does not: that guest
+/// telemetry stays on the console, and the enclave serves.
+async fn start_telemetry(
+    cli: &Cli,
+    image: Option<String>,
+) -> Result<enclave_runtime::telemetry::Telemetry> {
+    use enclave_runtime::telemetry::{
+        CloudWatchMetrics, Metrics, MetricsConfig, Telemetry, Tracer, XrayConfig, XrayDestination,
+    };
+
+    let tracer = if cli.xray {
+        let config = XrayConfig {
+            region: cli.region.clone(),
+            endpoint: cli.testing.xray_endpoint.clone(),
+        };
+        match tokio::time::timeout(
+            enclave_runtime::STARTUP_PROBE_TIMEOUT,
+            XrayDestination::connect(&config),
+        )
+        .await
+        {
+            Ok(destination) => {
+                tracing::info!("guest spans are going to X-Ray");
+                Some(Tracer::start(
+                    std::sync::Arc::new(destination),
+                    image,
+                    cli.region.clone(),
+                ))
+            }
+            Err(_) => {
+                tracing::error!(
+                    timeout = ?enclave_runtime::STARTUP_PROBE_TIMEOUT,
+                    "could not build an X-Ray client in time; guest spans stay on the console"
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let metrics = match nonempty(&cli.metrics_namespace) {
+        None => None,
+        Some(namespace) => {
+            anyhow::ensure!(
+                MetricsConfig::valid_namespace(&namespace),
+                "--metrics-namespace must be 1-255 printable ASCII characters, and not under AWS/"
+            );
+            let config = MetricsConfig {
+                namespace: namespace.clone(),
+                region: cli.region.clone(),
+                endpoint: cli.testing.metrics_endpoint.clone(),
+            };
+            match tokio::time::timeout(
+                enclave_runtime::STARTUP_PROBE_TIMEOUT,
+                CloudWatchMetrics::connect(&config),
+            )
+            .await
+            {
+                Ok(destination) => {
+                    tracing::info!(%namespace, "guest metrics are going to CloudWatch");
+                    Some(Metrics::start(std::sync::Arc::new(destination), namespace))
+                }
+                Err(_) => {
+                    tracing::error!(
+                        timeout = ?enclave_runtime::STARTUP_PROBE_TIMEOUT,
+                        %namespace,
+                        "could not build a CloudWatch client in time; guest metrics are dropped"
+                    );
+                    None
+                }
+            }
+        }
+    };
+
+    Ok(Telemetry::new(tracer, metrics))
+}
+
 #[derive(Parser, Debug)]
 #[command(
     version,
@@ -189,6 +270,16 @@ struct Cli {
     #[arg(long, env = "ENCLAVE_GUEST_LOG_GROUP")]
     guest_log_group: Option<String>,
 
+    /// Export each guest invocation as an AWS X-Ray trace: its spans, its events, and the tenant
+    /// it ran for. The instance role needs `xray:PutTraceSegments`.
+    #[arg(long, env = "ENCLAVE_XRAY", value_parser = parse_bool_flag, num_args = 0..=1, default_value_t = false, default_missing_value = "true")]
+    xray: bool,
+
+    /// CloudWatch namespace guest metrics are published under with `PutMetricData`. Empty or
+    /// unset means none. The instance role needs `cloudwatch:PutMetricData`.
+    #[arg(long, env = "ENCLAVE_METRICS_NAMESPACE")]
+    metrics_namespace: Option<String>,
+
     /// Report on the clock and entropy source and exit, without mounting or
     /// running anything. For diagnosing a deployment.
     #[arg(long, alias = "clock-check")]
@@ -288,6 +379,14 @@ struct Testing {
     #[arg(long, env = "ENCLAVE_GUEST_LOG_ENDPOINT")]
     guest_log_endpoint: Option<String>,
 
+    /// Point the X-Ray client somewhere else, such as a local stand-in for the service.
+    #[arg(long, env = "ENCLAVE_XRAY_ENDPOINT")]
+    xray_endpoint: Option<String>,
+
+    /// Point the CloudWatch metrics client somewhere else.
+    #[arg(long, env = "ENCLAVE_METRICS_ENDPOINT")]
+    metrics_endpoint: Option<String>,
+
     /// Point the push client at a stub: an `http://` endpoint hands wake signals to
     /// whatever is listening, and requests to it are signed with a placeholder
     /// rather than the instance's role.
@@ -333,6 +432,8 @@ impl Testing {
             acme_ca: None,
             acme_contacts: Vec::new(),
             guest_log_endpoint: None,
+            xray_endpoint: None,
+            metrics_endpoint: None,
             push_endpoint: None,
             cosign_attestations: false,
         }
@@ -706,20 +807,20 @@ async fn run() -> Result<enclave_runtime::GuestOutcome> {
         vec![std::sync::Arc::new(enclave_runtime::TracingLogSink)];
     let mut log_forwarder = None;
 
-    if let Some(config) = cli.guest_log_config() {
-        // Which image is writing to this stream. A fixed stream name is
-        // shared by every boot and every image, so without this nothing
-        // in it says which enclave produced which line.
-        let image = attestation
-            .as_ref()
-            .and_then(|nsm| match nsm.describe_pcr(0) {
-                Ok(pcr) => Some(hex::encode(pcr.value)),
-                Err(e) => {
-                    tracing::warn!(error = %e, "could not read PCR0 for the guest log stream");
-                    None
-                }
-            });
+    // Which image is running, for the guest log stream and on every trace. A fixed stream name is
+    // shared by every boot and every image, so without this nothing in it says which enclave
+    // produced which line.
+    let image = attestation
+        .as_ref()
+        .and_then(|nsm| match nsm.describe_pcr(0) {
+            Ok(pcr) => Some(hex::encode(pcr.value)),
+            Err(e) => {
+                tracing::warn!(error = %e, "could not read PCR0 for guest logs and traces");
+                None
+            }
+        });
 
+    if let Some(config) = cli.guest_log_config() {
         // Bounded, like everything else on this path. Building the
         // client resolves a credential provider, and that reaches IMDS
         // through gvproxy — a path this deployment has not verified. A
@@ -797,6 +898,11 @@ async fn run() -> Result<enclave_runtime::GuestOutcome> {
         }
     }
 
+    // Guest spans and metrics. Bounded like the log client, for the same reason: each client
+    // resolves a credential provider through gvproxy, and telemetry that cannot be set up must
+    // leave the guest's calls working and the listener binding.
+    let telemetry = start_telemetry(&cli, image.clone()).await?;
+
     // Decided before the listener binds, so a setting that cannot work is a boot failure rather
     // than a surprise on the first wake. Whether the application can deliver is the probe's to
     // find out once serving starts.
@@ -843,6 +949,7 @@ async fn run() -> Result<enclave_runtime::GuestOutcome> {
         guest,
         ServeConfig {
             notify,
+            telemetry,
             // Whether tasks run is the guest's to say, by exporting `run-task`.
             background_tasks: Some(Default::default()),
             addr: HTTP_LISTEN,
