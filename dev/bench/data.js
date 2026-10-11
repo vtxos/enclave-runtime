@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791644864368,
-  "repoUrl": "https://github.com/BitspendPayment/enclave-runtime",
+  "lastUpdate": 1791737559460,
+  "repoUrl": "https://github.com/vtxos/enclave-runtime",
   "entries": {
     "Benchmark": [
       {
@@ -155,6 +155,48 @@ window.BENCHMARK_DATA = {
             "name": "guest/dispatch/committing",
             "value": 834533,
             "range": "± 1164455",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joshuaaruokhaitech@gmail.com",
+            "name": "Aruokhai Joshua",
+            "username": "aruokhai"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c4a0b9650561b7113664cf5cf94331168d4d1deb",
+          "message": "Merge pull request #4 from vtxos/telemetry\n\nGuest telemetry: tracing to X-Ray, metrics to CloudWatch",
+          "timestamp": "2026-10-11T19:46:54+03:00",
+          "tree_id": "40dd4b076d3329b6d595171623fdaf3f91a720bc",
+          "url": "https://github.com/vtxos/enclave-runtime/commit/c4a0b9650561b7113664cf5cf94331168d4d1deb"
+        },
+        "date": 1791737558617,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "guest/instantiate",
+            "value": 32922,
+            "range": "± 2902",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/trivial",
+            "value": 203704,
+            "range": "± 9285",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/committing",
+            "value": 1132850,
+            "range": "± 701095",
             "unit": "ns/iter"
           }
         ]
