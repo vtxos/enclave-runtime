@@ -150,7 +150,9 @@ stdenvNoCC.mkDerivation {
     # people compare artifacts by hashing them, and because it lets
     # `nix build --rebuild` be a check that passes rather than a known
     # exception.
-    faketime -f '@1970-01-01 00:00:01' \
+    # No `@`: with one, faketime starts the clock there and lets it run, and the nanoseconds it
+    # had run for by the time eif_build read it still differed between builds.
+    faketime -f '1970-01-01 00:00:01' \
     eif_build \
       --kernel ${kernel}/bzImage \
       --kernel_config ${kernel}/bzImage.config \
