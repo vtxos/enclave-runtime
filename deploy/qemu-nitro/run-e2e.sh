@@ -59,6 +59,10 @@ PREFIX=e2e
 # A second guest, altered, for leg 8. Nothing else here needs one, so lib.sh
 # does not stage it unless asked.
 WITH_SUBSTITUTE=1
+# Any guest, not the example one (with GUEST_WASM): only the legs that hold for
+# every guest run — the gate, the attestation, the PCRs, a restart and a
+# substitution. The rest drive guest-http's own routes.
+GUEST_AGNOSTIC="${GUEST_AGNOSTIC:-}"
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
@@ -91,6 +95,7 @@ code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 20 \
     || fail "a request with no nonce answered $code; it should be refused before routing"
 echo "un-nonced requests refused: 400"
 
+if [[ -z "$GUEST_AGNOSTIC" ]]; then  # guest-http's routes, to the end of 2b
 say "2/8  a passkey enrols and its signed requests reach the guest"
 rm -f "$RUNDIR/alice.json" "$RUNDIR/bob.json"
 signed enrol >/dev/null || fail "registration failed"
@@ -134,6 +139,7 @@ for i in $(seq 1 "$FILES"); do
         || fail "/files/work-$i.txt kept a stale value \"$got\" after being overwritten"
 done
 echo "$FILES files written, read, overwritten and re-read through the gate"
+fi
 
 say "3/8  the attestation binds this connection's certificate, runtime and guest"
 # There is no attestation endpoint: the document rides on the `/auth/` exchange,
@@ -151,6 +157,7 @@ say "3/8  the attestation binds this connection's certificate, runtime and guest
 grep -q "binding    the attested certificate" "$RUNDIR/attest.log" \
     || fail "the document did not bind the certificate this connection was served"
 
+if [[ -z "$GUEST_AGNOSTIC" ]]; then  # signs for guest-http's /counter
 say "3b/8 a signed interaction verifies the enclave before it trusts it"
 # The proof comes from the `/auth/` exchange, not from the guest's response:
 # that exchange is where a client identifies the enclave, before it hands over
@@ -179,6 +186,7 @@ signed --dump-proof "$RUNDIR/proof" get --path /counter >/dev/null \
 
 grep -q "binding    the attested certificate" "$RUNDIR/attest-guest.log" \
     || fail "the document did not bind that connection's certificate"
+fi
 
 say "4/8  the attested PCR0 and PCR16 are the ones the builds produced"
 # `nitro-attest --pcr0 --guest` already enforced both, so reaching here means
@@ -192,6 +200,7 @@ echo "      attested: $(grep -oE '^PCR16 +[0-9a-f]+' "$RUNDIR/attest.log" | awk 
 # ---------------------------------------------------------------------------
 # 5/8 — one instance per request, and one approval per interaction.
 # ---------------------------------------------------------------------------
+if [[ -z "$GUEST_AGNOSTIC" ]]; then  # guest-http's routes, to the end of 6b
 say "5/8  every request gets a fresh instance, and no two tenants share one"
 
 # `/memory` counts in the guest's linear memory and writes nowhere. What it
@@ -409,6 +418,7 @@ echo "$wake" | jq -e '.message.notification == null' >/dev/null \
 keys="$(echo "$wake" | jq -r '.message.data | keys | join(",")')"
 [[ "$keys" == "category,ref,v" ]] || fail "the wake carried more than its labels: $keys"
 echo "a data-only wake reached the enrolled device: category=task-done ref=e2e-job"
+fi
 
 # ---------------------------------------------------------------------------
 # 7/8 — the boot machine, across a restart.
@@ -514,6 +524,23 @@ echo "a client pinning the approved guest refused: PCR16 mismatch"
 echo "it attests the substitute it is running: PCR16 $SUBSTITUTE_PCR16"
 
 docker rm -f "$PREFIX-qemu-substitute" >/dev/null 2>&1 || true
+
+if [[ -n "$GUEST_AGNOSTIC" ]]; then
+    cat <<EOF
+
+== PASS (any guest: $GUEST_WASM) ==
+  the guest booted from the store, measured into PCR16, behind real ACME TLS
+  the guest was unreachable without a passkey assertion
+  the document bound this connection's certificate, PCR0 and PCR16
+  genesis wrote an attested state origin, and a restart resumed it
+  a substituted guest was measured and recorded as an upgrade, and a client
+    pinning the approved guest refused it
+
+The legs that drive guest-http's routes did not run. A guest's own behaviour
+is its own suite's to prove.
+EOF
+    exit 0
+fi
 
 cat <<EOF
 

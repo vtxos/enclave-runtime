@@ -30,4 +30,11 @@ cd "$REPO"
 # KVM, vsock, the QEMU image and vhost-device-vsock — see scripts/lib.sh.
 prepare_enclave_host
 
-exec deploy/qemu-nitro/run-e2e.sh
+deploy/qemu-nitro/run-e2e.sh
+
+# The same stack again, serving the cosigner as released (cosigner.lock): only
+# the legs that hold for any guest, since the rest drive the example's routes.
+# The image is built by now, so this costs its boots.
+"$REPO/scripts/cosigner.sh"
+GUEST_WASM="$REPO/target/cosigner/cosigner.wasm" GUEST_AGNOSTIC=1 \
+    exec deploy/qemu-nitro/run-e2e.sh

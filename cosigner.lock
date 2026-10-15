@@ -1,0 +1,4 @@
+# The cosigner this runtime's CI serves: a release of vtxos/cosigner, by name and the sha256 of its
+# cosigner.wasm. scripts/cosigner.sh fetches it and refuses any other bytes. Shell syntax.
+RELEASE=v0.1.0
+SHA256=ba4976e0b547e9e342fca273e1cd78d2426d0df55e2ea5d9761b6428b86889cf

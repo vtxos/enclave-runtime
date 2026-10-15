@@ -71,6 +71,12 @@ cargo test -p enclave-runtime --test serve_auth -- --include-ignored
 say "guest logging"
 cargo test -p enclave-runtime --test guest_logs -- --include-ignored
 
+# The one guest this runtime is built to serve, as its own repository released
+# it (cosigner.lock): every import it makes still links, and it answers.
+say "the released cosigner"
+"$REPO/scripts/cosigner.sh"
+cargo test -p enclave-runtime --test serve_cosigner -- --include-ignored
+
 # The verifier's own tests build the binary, so there is no separate build step
 # here — nothing in CI executes the artifact itself.
 say "verifier measurement requirements"
