@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791737559460,
-  "repoUrl": "https://github.com/vtxos/enclave-runtime",
+  "lastUpdate": 1792053849965,
+  "repoUrl": "https://github.com/vtxos/runtime",
   "entries": {
     "Benchmark": [
       {
@@ -197,6 +197,48 @@ window.BENCHMARK_DATA = {
             "name": "guest/dispatch/committing",
             "value": 1132850,
             "range": "± 701095",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joshuaaruokhaitech@gmail.com",
+            "name": "Aruokhai Joshua",
+            "username": "aruokhai"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0022862507cec2bb0821ffece0b6f39506112897",
+          "message": "Merge pull request #7 from vtxos/reproducible-zfs-modules\n\nBuild the same enclave image on every machine",
+          "timestamp": "2026-10-15T11:31:03+03:00",
+          "tree_id": "0608bbd9b0355f5f321b3d542b71aa6d9764f6f8",
+          "url": "https://github.com/vtxos/runtime/commit/0022862507cec2bb0821ffece0b6f39506112897"
+        },
+        "date": 1792053849323,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "guest/instantiate",
+            "value": 49628,
+            "range": "± 6323",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/trivial",
+            "value": 269712,
+            "range": "± 8249",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/committing",
+            "value": 1182294,
+            "range": "± 50013",
             "unit": "ns/iter"
           }
         ]
