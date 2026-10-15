@@ -416,7 +416,6 @@ cargo build --release -p enclave-runtime --features testing --bin passkey-client
 | `scripts/ci-guests.sh` | Builds the guests; tests tasks, held connections, dispatch, TLS binding, HTTP/2, gRPC, authentication and logging |
 | `scripts/ci-storage.sh` | Real MinIO/S3: retention, remount, corruption, rollback and competing claims (needs Docker) |
 | `scripts/ci-e2e.sh` | The stages above, then the full QEMU stack (needs KVM, Docker and Nix), once with the example guest and once with the released [cosigner](https://github.com/vtxos/cosigner) pinned in [`cosigner.lock`](cosigner.lock) |
-| `scripts/cosigner.sh` | Fetches that cosigner into `target/cosigner/`; `COSIGNER_WASM=path` uses a local build instead |
 | `scripts/wit-drift.sh` | Vendored guest WIT matches [`wit/`](wit/) |
 | `scripts/ci-bench.sh` | Criterion storage and instance-cost benchmarks |
 
