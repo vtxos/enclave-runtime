@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792053849965,
+  "lastUpdate": 1792057962222,
   "repoUrl": "https://github.com/vtxos/runtime",
   "entries": {
     "Benchmark": [
@@ -239,6 +239,48 @@ window.BENCHMARK_DATA = {
             "name": "guest/dispatch/committing",
             "value": 1182294,
             "range": "± 50013",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joshuaaruokhaitech@gmail.com",
+            "name": "Aruokhai Joshua",
+            "username": "aruokhai"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bf5f8044691dca05b77faf6754be626254a49261",
+          "message": "Merge pull request #6 from vtxos/drop-publish-dev-enclave\n\nStop publishing dev enclave bundles",
+          "timestamp": "2026-10-15T12:46:04+03:00",
+          "tree_id": "040e877d0d8f09e79cb7bb095aa6af686c1c4ead",
+          "url": "https://github.com/vtxos/runtime/commit/bf5f8044691dca05b77faf6754be626254a49261"
+        },
+        "date": 1792057961603,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "guest/instantiate",
+            "value": 53863,
+            "range": "± 6634",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/trivial",
+            "value": 273371,
+            "range": "± 11657",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/committing",
+            "value": 1205329,
+            "range": "± 305822",
             "unit": "ns/iter"
           }
         ]
