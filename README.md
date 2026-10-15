@@ -256,7 +256,7 @@ The first run builds an enclave image and takes a while. The harness prints the 
 
 **The emulator exercises the protocol, not AWS's hardware trust boundary.** It uses a development master key, and it signs attestation documents with a chain it mints at each boot because QEMU's NSM cannot produce AWS-signed ones. It also runs on the host clock. Use it with test data only.
 
-To build on one machine and run on another, `--pack` produces a self-contained bundle and `--prebuilt` runs one; the *Publish a dev enclave* workflow attaches such bundles to GitHub releases. See the [development guide](docs/DEV_ENCLAVE.md).
+To build on one machine and run on another, `--pack` produces a self-contained bundle and `--prebuilt` runs one; a consumer packs the bundle it needs from a commit it pins. See the [development guide](docs/DEV_ENCLAVE.md).
 
 ### 3. Make an authenticated, stateful request
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# A dev enclave, built here and runnable anywhere: the bundle a release carries.
+# A dev enclave, built here and runnable anywhere: the bundle a consumer packs
+# from a commit it pins.
 #
 #   scripts/ci-pack.sh OUT PROFILE [image options...]
 #
@@ -15,9 +16,8 @@
 # The example guest is what the smoke boots; a bundle carries no guest, and
 # whoever runs it names their own.
 #
-# Image options fix PCR0, so one bundle is one configuration. A consumer
-# repository publishes the options its harness expects and pins the bundle
-# built from them — see docs/DEV_ENCLAVE.md.
+# Image options fix PCR0, so one bundle is one configuration. A consumer packs
+# with the options its harness expects — see docs/DEV_ENCLAVE.md.
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 cd "$REPO"
 

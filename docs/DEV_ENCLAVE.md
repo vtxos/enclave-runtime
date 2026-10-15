@@ -207,13 +207,12 @@ the udev rule `scripts/lib.sh`'s `prepare_enclave_host` applies. Image options a
 short path: its sockets live under `DIR/target/qemu-nitro/<name>/`, and a Unix socket path is at
 most 107 bytes — past that `vhost-device-vsock` fails with "path must be shorter than SUN_LEN".
 
-`scripts/ci-pack.sh OUT PROFILE [image options...]` is the whole release step: it packs, tars the
-bundle as `dev-enclave-PROFILE-<rev>.tar.gz` with a `.sha256`, and then runs `run-e2e.sh` — all
-eight legs — from an extracted copy with nothing pointing at the checkout. The "Publish a dev
-enclave" workflow runs it on a hosted runner and attaches the result to a release named after the
-profile and the revision. One bundle is one configuration: image options are measured into PCR0,
-so a consumer publishes the options its harness expects, pins the bundle built from them, and
-checks `image.env` against them before booting.
+A consumer packs the bundle it needs from a commit it pins: `dev-enclave.sh --pack DIR`, or
+`scripts/ci-pack.sh OUT PROFILE [image options...]`, which also tars the bundle as
+`dev-enclave-PROFILE-<rev>.tar.gz` with a `.sha256` and then runs `run-e2e.sh` — all eight legs —
+from an extracted copy with nothing pointing at the checkout. One bundle is one configuration:
+image options are measured into PCR0, so a consumer packs with the options its harness expects
+and checks `image.env` against them before booting.
 
 The attestation chain the emulator mints is valid for 30 days, so a long-running host has to be
 restarted within that — with `--keep-store`, a restart costs nothing but new pins.
