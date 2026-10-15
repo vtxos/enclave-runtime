@@ -78,7 +78,15 @@ let
     extraMakeFlags = [ "KBUILD_BUILD_USER=nixbuild" "KBUILD_BUILD_HOST=nixbuilder" ];
   };
 
-  zfsKmod = (linuxPackagesFor kernel).${zfs.kernelModuleAttribute};
+  # ZFS's assertions carry __FILE__, so its modules record where they were compiled: /build/source
+  # in a sandboxed Nix, a temporary directory in one without a sandbox. The image held them, and
+  # the same commit measured to two PCR0s. Mapped to the sandbox's path, every builder produces
+  # the modules a sandboxed one always did.
+  zfsKmod = ((linuxPackagesFor kernel).${zfs.kernelModuleAttribute}).overrideAttrs (old: {
+    preBuild = (old.preBuild or "") + ''
+      export KCFLAGS="''${KCFLAGS:-} -ffile-prefix-map=$NIX_BUILD_TOP=/build"
+    '';
+  });
 in
 assert zfsKmod.version == zfs.version;
 {
