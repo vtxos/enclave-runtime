@@ -1,4 +1,4 @@
-# enclave-runtime
+# Aegira
 
 **Run an ordinary WebAssembly component inside an AWS Nitro Enclave, where the enclave itself serves every standard WASI call, down to the hardware clock and the security module.**
 
