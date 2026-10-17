@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792057962222,
+  "lastUpdate": 1792278383543,
   "repoUrl": "https://github.com/vtxos/runtime",
   "entries": {
     "Benchmark": [
@@ -281,6 +281,48 @@ window.BENCHMARK_DATA = {
             "name": "guest/dispatch/committing",
             "value": 1205329,
             "range": "± 305822",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joshuaaruokhaitech@gmail.com",
+            "name": "Aruokhai Joshua",
+            "username": "aruokhai"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ff14f39428d2582e97b2b40352aa8b503300006c",
+          "message": "Merge pull request #8 from vtxos/readme-aegira\n\ndocs: the project is Aegira",
+          "timestamp": "2026-10-18T01:59:51+03:00",
+          "tree_id": "ac72e5c4269a6c345bd86bee08399e3143ddc7b0",
+          "url": "https://github.com/vtxos/runtime/commit/ff14f39428d2582e97b2b40352aa8b503300006c"
+        },
+        "date": 1792278382939,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "guest/instantiate",
+            "value": 50824,
+            "range": "± 5649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/trivial",
+            "value": 273585,
+            "range": "± 10906",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "guest/dispatch/committing",
+            "value": 1234064,
+            "range": "± 82149",
             "unit": "ns/iter"
           }
         ]
